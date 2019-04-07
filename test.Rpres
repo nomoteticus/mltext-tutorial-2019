@@ -1,0 +1,40 @@
+Workshop
+========================================================
+author: Vlad
+date: 19/05/2001
+autosize: true
+font-family: 'Helvetica'
+
+First Slide
+========================================================
+
+- Bullet 1
+- Bullet 2
+- Bullet 3
+
+
+Slide With Code
+========================================================
+
+```{r}
+library(tibble)
+as_data_frame(cars)
+```
+
+Slide With Plot
+========================================================
+
+```{r, echo=FALSE}
+plot(cars)
+```
+
+Three-Column Slide
+====================================
+First column
+- asd
+***
+Second column
+- asd
+***
+Third column
+- asd
