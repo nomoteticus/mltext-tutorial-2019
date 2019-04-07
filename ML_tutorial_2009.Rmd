@@ -7,7 +7,15 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+```{r load packages}
+library(dplyr)
+```
+
 ## R Markdown
+
+```{r}
+round()
+```
 
 
 ```{r cars}
