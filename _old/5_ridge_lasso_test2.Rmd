@@ -12,6 +12,10 @@ library(mlbench)
 library(glmnet)
 library(quanteda)
 library(Matrix)
+library(readxl)
+library(dplyr)
+library(lubridate)
+library(caret)
 ```
 
 ## Data
@@ -40,7 +44,7 @@ DTSs = DTS %>% filter(selected) %>% left_join(CLAS18 %>% select(subreddit, categ
 ```
 
 ```{r}
-REDDIT = read_rds("RedditExeter.rds")
+REDDIT = read_rds("data/RedditExeter.rds")
 REDDIT
 ```
 
@@ -53,7 +57,7 @@ R_DFM = dfm(R_corpus,
             remove = stopwords("english"), 
             remove_numbers = TRUE) 
 
-R_DFM_trim = R_DFM %>% dfm_trim(min_docfreq = 50) %>% dfm_tfidf()
+R_DFM_trim = R_DFM %>% dfm_trim(min_docfreq = 75) %>% dfm_tfidf()
 
 #dfmDTSm = convert(R_DFM_final, to = "data.frame") %>% select(-document) %>% 
 #          cbind(.,docvars(R_DFM_final)) %>%  
@@ -75,13 +79,6 @@ reddit_train_Y = docvars(R_DFM_final)$is_troll[train] %>% factor(labels = c("not
 reddit_test_Y = docvars(R_DFM_final)$is_troll[-train] %>% factor(labels = c("not","TROLL"))
 ```
 
-## Regularized regression
-
-
-```{r}
-X <- sparse.model.matrix(is_troll ~ ., data = reddit_train)[,-ncol(reddit_train)]
-y <- reddit_train$is_troll
-```
 
 ### Lasso
 
@@ -159,6 +156,7 @@ t
 
 
 
+
 ```{r}
 set.seed(527)
 tuneGrid_glm = expand.grid(alpha = c(1), lambda = 10^seq(-7, 3, length = 20) %>% round(7) )
@@ -181,14 +179,61 @@ cfm
 ```
 
 
-```{r}
+## Find best months / glmnet
 
+```{r}
+REDDIT = REDDIT %>% mutate(month = month(date))
+cfm = list()
+
+RM = REDDIT
+m=8
+
+for (m in 4:9){
+  RM = REDDIT %>% filter(month==m)
+  R_corpus = corpus(RM %>% transmute(name, num_comments, is_self, score, title, hour, is_troll), 
+                 docid_field="name", text_field="title")
+  R_DFM = dfm(R_corpus, 
+              stem=TRUE, 
+              remove_punct = TRUE, 
+              remove = stopwords("english"), 
+              remove_numbers = TRUE) 
+  
+  R_DFM_trim = R_DFM %>% dfm_trim(min_docfreq = round(nrow(RM)*.005)) %>% dfm_tfidf()
+  
+  R_DFM_final = R_DFM_trim %>% dfm_remove("document") %>% 
+                dfm_replace(featnames(R_DFM_trim), make.names(featnames(R_DFM_trim)))
+  
+  set.seed(743)
+  train <- sample(1:nrow(R_DFM_final), 0.7*nrow(R_DFM_final))
+  reddit_train_X <- R_DFM_final[train,]
+    reddit_test_X <- R_DFM_final[-train,]
+  reddit_train_XM = convert(reddit_train_X, to = "matrix")
+    reddit_test_XM =  convert(reddit_test_X, to = "matrix")
+  reddit_train_Y = docvars(R_DFM_final)$is_troll[train] %>% factor(labels = c("not","TROLL"))
+    reddit_test_Y = docvars(R_DFM_final)$is_troll[-train] %>% factor(labels = c("not","TROLL"))
+  
+  m2_cv <- cv.glmnet(reddit_train_X, reddit_train_Y, alpha = 1, family = "binomial")#, type.measure="auc")
+    bestlam1 <- m2_cv$lambda.min
+    bestlam2 <- m2_cv$lambda.1se
+  p_lasso <- predict(m2_cv, s = bestlam2, newx = reddit_test_X, type = "class") %>% factor
+    confusionMatrix(p_lasso, reddit_test_Y, positive = "TROLL", mode = "prec_recall")
+    cfm[[m-3]] = confusionMatrix(p_lasso, factor(reddit_test_Y), positive = "TROLL", mode = "prec_recall")
+    print(paste("Month = ", m))
+    print(cfm[[m-3]])
+}
+
+```
+
+
+# Random Forests
+```{r}
+cfm
 ```
 
 
 ```{r}
 set.seed(527)
-tuneGrid_rf = expand.grid(mtry = c(5,10,20))
+tuneGrid_rf = expand.grid(mtry = c(5,10))
 ctrl_rf <- trainControl(method = "cv", number = 5)
 set.seed(527)
 train_rf <- train(x = reddit_train_XM, y = reddit_train_Y, 
@@ -196,6 +241,61 @@ train_rf <- train(x = reddit_train_XM, y = reddit_train_Y,
                       tuneGrid = tuneGrid_rf,
                       metric = "Kappa",
                       trControl = ctrl)
+```
+
+```{r}
+
+```
+
+
+## Find best months
+
+```{r}
+REDDIT = REDDIT %>% mutate(month = month(date))
+cfmRF = list()
+
+RM = REDDIT
+m=6
+
+for (m in 4:9){
+  RM = REDDIT %>% filter(month==m)
+  R_corpus = corpus(RM %>% transmute(name, num_comments, is_self, score, title, hour, is_troll), 
+                 docid_field="name", text_field="title")
+  R_DFM = dfm(R_corpus, 
+              stem=TRUE, 
+              remove_punct = TRUE, 
+              remove = stopwords("english"), 
+              remove_numbers = TRUE) 
+  
+  R_DFM_trim = R_DFM %>% dfm_trim(min_docfreq = round(nrow(RM)*.01)) %>% dfm_tfidf()
+  
+  R_DFM_final = R_DFM_trim %>% dfm_remove("document") %>% 
+                dfm_replace(featnames(R_DFM_trim), make.names(featnames(R_DFM_trim)))
+  
+  set.seed(743)
+  train <- sample(1:nrow(R_DFM_final), 0.7*nrow(R_DFM_final))
+  reddit_train_X <- R_DFM_final[train,]
+    reddit_test_X <- R_DFM_final[-train,]
+  reddit_train_XM = convert(reddit_train_X, to = "matrix")
+    reddit_test_XM =  convert(reddit_test_X, to = "matrix")
+  reddit_train_Y = docvars(R_DFM_final)$is_troll[train] %>% factor(labels = c("not","TROLL"))
+    reddit_test_Y = docvars(R_DFM_final)$is_troll[-train] %>% factor(labels = c("not","TROLL"))
+  
+  set.seed(743)
+  tuneGrid_rf = expand.grid(mtry = c(20, 30))
+  ctrl_rf <- trainControl(method = "cv", number = 5, classProbs = TRUE)
+  set.seed(743)
+  train_rf <- train(x = reddit_train_XM, y = reddit_train_Y, 
+                      method = "rf",
+                      tuneGrid = tuneGrid_rf,
+                      metric = "Kappa",
+                      trControl = ctrl_rf)
+
+  c_rf <- predict(train_rf, newdata = reddit_test_XM)
+  cfmRF[[m-3]] = confusionMatrix(c_rf, factor(reddit_test_Y), positive = "TROLL", mode = "prec_recall")
+    print(paste("Month = ", m))
+    print(cfmRF[[m-3]])
+}
 ```
 
 
