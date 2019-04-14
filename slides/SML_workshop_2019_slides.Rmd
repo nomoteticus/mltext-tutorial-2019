@@ -1,6 +1,7 @@
 ---
 title: "SML_workshop_2019_slides"
-output: slidy_presentation
+output:
+  slidy_presentation: default
 ---
 
 ```{r setup, include=FALSE}

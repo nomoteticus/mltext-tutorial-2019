@@ -5,8 +5,9 @@
 # Session Data files
 .RData
 
-# Example code in package build process
+# Example code
 *-Ex.R
+*_draft.R
 
 # Output files from R CMD build
 /*.tar.gz

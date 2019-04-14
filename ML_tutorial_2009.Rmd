@@ -7,18 +7,24 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-```{r load packages}
-library(dplyr)
+# Open and explore dataset
+```{r}
+REDDIT = read_rds("R")
 ```
-
-## R Markdown
 
 ```{r}
-round()
+
 ```
 
+```{r}
 
-```{r cars}
-summary(cars)
+```
+
+```{r}
+
+```
+
+```{r}
+
 ```
 

@@ -1,0 +1,135 @@
+---
+title: "Machine Learning in the Social Sciences"
+subtitle: "Regularized regression"
+author: "Christoph Kern"
+output: html_notebook
+---
+
+## Setup
+
+```{r results='hide', message=FALSE, warning=FALSE}
+library(mlbench)
+library(glmnet)
+library(quanteda)
+library(Matrix)
+```
+
+## Import classes
+
+```{r}
+CLAS18 = read_excel("CLASSIFY_categ_comm_14-18_FINAL.xlsx",sheet="categ_comm_sub_14-18") %>% 
+         filter(nposts>1) %>% select(-nposts) 
+CLAS18
+```
+
+## Extract sample of controls
+
+```{r}
+set.seed(555)
+mult = 10
+s = sample(1:nrow(DTS), mult*sum(DTS$is_troll))
+DTS$selected =FALSE
+DTS$selected[DTS$is_troll]=TRUE
+DTS$selected[s]=TRUE
+DTSs = DTS %>% filter(selected) %>% left_join(CLAS18 %>% select(subreddit, categ1))
+
+```
+
+## Read dataset
+
+```{r}
+DTSs = read_rds("DTSs.rds")
+```
+
+# Preprocessing
+## Prepare document_term_matrix
+
+```{r}
+DTSsC = corpus(DTSs %>% select(categ1, num_comments, is_self, V1, title, is_troll), 
+               docid_field="V1", text_field="title")
+dfmDTSs = dfm(DTSsC, stem=TRUE, 
+              remove_punct = TRUE, remove = stopwords("english"), remove_numbers = TRUE) %>% 
+          dfm_trim(min_docfreq = 500) %>% dfm_tfidf()
+#dfmDTSm = convert(dfmDTSs, to = "data.frame") %>% select(-document) %>% 
+#          cbind(.,docvars(dfmDTSs)) %>%  
+#          mutate(is_troll = factor(is_troll), is_self = factor(is_self),
+#                 categ1 = factor(categ1)) 
+#names(dfmDTSm) = make.names(names(dfmDTSm))
+dfmDTSs = dfmDTSs %>% dfm_remove("document") %>% 
+          dfm_replace(featnames(dfmDTSs), make.names(featnames(dfmDTSs)))
+```
+
+
+# Machine Learning
+
+## Separate training and test set
+```{r}
+set.seed(7345)
+train <- sample(1:nrow(dfmDTSs), 0.8*nrow(dfmDTSs))
+boston_train <- dfmDTSs[train,]
+boston_test <- dfmDTSs[-train,]
+```
+
+## Input and Output
+
+```{r}
+X <- sparse.model.matrix(is_troll ~ ., data = boston_train)[,-ncol(boston_train)]
+y <- boston_train$is_troll
+```
+
+## Lasso regression
+
+
+```{r}
+m2b <- glmnet(X, y, alpha = 1, family="binomial")
+```
+
+### s
+```{r}
+m2$lambda[1]
+m2$lambda[(ncol(m2$beta)/2)]
+m2$lambda[ncol(m2$beta)]
+m2$beta[,1]
+m2$beta[,(ncol(m2$beta)/2)]
+m2$beta[,ncol(m2$beta)]
+```
+
+### Examine hyperparameters
+
+```{r}
+plot(m2, label=T, xvar = "lambda")
+```
+
+### Cross-validate
+
+```{r}
+m2_cv <- cv.glmnet(X, y, alpha = 1, family = "binomial")
+plot(m2_cv)
+```
+
+### Choose best setup
+
+```{r}
+coef(m2_cv, s = "lambda.min")
+bestlam2 <- m2_cv$lambda.1se
+```
+
+### Prediction in test set
+
+```{r}
+Xt <- model.matrix(is_troll ~ ., boston_test)[,-ncol(boston_test)]
+```
+
+### Prediction diagnostics
+```{r}
+p_lasso <- predict(m2, s = bestlam2, newx = Xt, type = "class") %>% factor
+cfm = confusionMatrix(p_lasso, boston_test$is_troll, positive = "TRUE", mode = "prec_recall")
+cfm
+```
+
+### Examining features
+
+```{r}
+library(broom)
+t = tidy(coef(m2, s = bestlam2))
+```
