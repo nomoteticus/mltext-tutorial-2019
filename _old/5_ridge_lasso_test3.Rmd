@@ -1,0 +1,342 @@
+---
+title: "Machine Learning in the Social Sciences"
+subtitle: "Regularized regression"
+author: "Christoph Kern"
+output: html_notebook
+---
+
+## Setup
+
+```{r results='hide', message=FALSE, warning=FALSE}
+library(mlbench)
+library(glmnet)
+library(quanteda)
+library(Matrix)
+library(readxl)
+library(dplyr)
+library(lubridate)
+library(caret)
+library(readr)
+```
+
+## Data
+
+```{r}
+CLAS18 = read_excel("CLASSIFY_categ_comm_14-18_FINAL.xlsx",sheet="categ_comm_sub_14-18") %>% 
+         filter(nposts>1) %>% select(-nposts) 
+CLAS18
+```
+
+
+```{r}
+set.seed(555)
+mult = 10
+s = sample(1:nrow(DTS), mult*sum(DTS$is_troll))
+DTS$selected =FALSE
+DTS$selected[DTS$is_troll]=TRUE
+DTS$selected[s]=TRUE
+```
+
+Since we want to compare the performance of some regularized models at the end of the modeling process, we first split the data into a training and a test part. This can be done by random sampling with `sample`.
+
+```{r}
+DTSs = DTS %>% filter(selected) %>% left_join(CLAS18 %>% select(subreddit, categ1))
+#write_rds(DTSs, "DTSs.rds", compress = "xz")
+```
+
+```{r}
+REDDIT = read_rds("data/RedditExeter.rds")
+REDDIT
+```
+
+```{r}
+R_corpus = corpus(REDDIT %>% transmute(name, num_comments, is_self, score, title, hour, is_troll), 
+               docid_field="name", text_field="title")
+R_DFM = dfm(R_corpus, 
+            stem=TRUE, 
+            remove_punct = TRUE, 
+            remove = stopwords("english"), 
+            remove_numbers = TRUE) 
+
+R_DFM_trim = R_DFM %>% dfm_trim(min_docfreq = 50) %>% dfm_tfidf()
+
+#dfmDTSm = convert(R_DFM_final, to = "data.frame") %>% select(-document) %>% 
+#          cbind(.,docvars(R_DFM_final)) %>%  
+#          mutate(is_troll = factor(is_troll), is_self = factor(is_self),
+#                 categ1 = factor(categ1)) 
+#names(dfmDTSm) = make.names(names(dfmDTSm))
+R_DFM_final = R_DFM_trim %>% dfm_remove("document") %>% 
+              dfm_replace(featnames(R_DFM_trim), make.names(featnames(R_DFM_trim)))
+```
+
+```{r}
+set.seed(7345)
+train <- sample(1:nrow(R_DFM_final), 0.7*nrow(R_DFM_final))
+reddit_train_X <- R_DFM_final[train,]
+reddit_test_X <- R_DFM_final[-train,]
+reddit_train_XM = convert(reddit_train_X, to = "matrix")
+reddit_test_XM =  convert(reddit_test_X, to = "matrix")
+reddit_train_Y = docvars(R_DFM_final)$is_troll[train] %>% factor(labels = c("not","TROLL"))
+reddit_test_Y = docvars(R_DFM_final)$is_troll[-train] %>% factor(labels = c("not","TROLL"))
+```
+
+
+### Lasso
+
+To estimate a Lasso sequence, we simply call `glmnet` again and set alpha to one. 
+
+```{r}
+m2 <- glmnet(reddit_train_X, reddit_train_Y, alpha = 1, family="binomial")
+```
+
+Here we want to display the first, last and one in-between model of our model series. We see that coefficients are eventually shrunken exactly to zero as the penalty on model complexity increases.
+
+```{r}
+m2$lambda[1]
+m2$lambda[(ncol(m2$beta)/2)]
+m2$lambda[ncol(m2$beta)]
+m2$beta[,1]
+m2$beta[,(ncol(m2$beta)/2)]
+m2$beta[,ncol(m2$beta)]
+```
+
+This also becomes clear when plotting the coefficient paths.
+
+```{r}
+plot(m2, label=T, xvar = "lambda")
+```
+
+When using Cross-Validation with Lasso, we see that a full model with all features may not lead to the best model in terms of prediction performance.
+
+```{r}
+m2_cv <- cv.glmnet(reddit_train_X, reddit_train_Y, alpha = 1, family = "binomial")
+plot(m2_cv)
+```
+
+Again, we may have a look at the model with the smallest CV error and store the corresponding lambda.
+
+```{r}
+#coef(m2_cv, s = "lambda.min")
+bestlam1 <- m2$lambda.min
+bestlam1_cv <- m2_cv$lambda.min
+bestlam2 <- m2$lambda.1se
+bestlam2_cv <- m2_cv$lambda.1se
+```
+
+
+### Prediction in test set
+
+Finally, we investigate the performance of our models in the test set. For this task, we construct an X matrix from the test set.
+
+```{r}
+Xt <- model.matrix(is_troll ~ ., reddit_test)[,-ncol(reddit_test)]
+```
+
+This matrix can be used in the `predict` function, along with the respective model that should be used for prediction. We try out our best ridge, lasso and elastic net model. One can also add a "null model" with a huge penalty for comparison purposes.
+
+```{r}
+p_lasso <- predict(m2_cv, s = bestlam1_cv, newx = reddit_test_X, type = "class") %>% factor
+cfm = confusionMatrix(p_lasso, factor(reddit_test_Y), positive = "TROLL", mode = "prec_recall")
+cfm
+```
+
+As a last step, let's look at the test MSE of our models.
+
+```{r}
+mean((p_null - reddit_test$medv)^2)
+
+mean((p_lasso - reddit_test$medv)^2)
+```
+
+```{r}
+library(broom)
+t = tidy(coef(m2, s = bestlam2))
+t
+```
+
+## References
+
+* https://web.stanford.edu/~hastie/glmnet/glmnet_alpha.html
+
+
+
+
+```{r}
+set.seed(527)
+tuneGrid_glm = expand.grid(alpha = c(1), lambda = 10^seq(-7, 3, length = 20) %>% round(7) )
+
+ctrl <- trainControl(method = "repeatedcv", number = 5, repeats = 3,
+                     classProbs = TRUE, summaryFunction = prSummary)
+set.seed(527)
+up_inside <- train(x = reddit_train_XM, y = reddit_train_Y, 
+                   method = "glmnet",
+                   tuneGrid = tuneGrid_glm,
+                   metric = "AUC",
+                   trControl = ctrl)
+```
+
+
+```{r}
+p_lasso <- predict(up_inside, newdata = reddit_test_XM, type = "raw")
+cfm = confusionMatrix(p_lasso, reddit_test_Y, positive = "TROLL", mode = "prec_recall")
+cfm
+```
+
+
+## Find best months / glmnet
+
+```{r}
+REDDIT = REDDIT %>% mutate(month = month(date))
+cfm = list()
+
+RM = NULL
+
+for (m in 4:9){
+  RM = REDDIT %>% filter(month==m)
+  R_corpus = corpus(RM %>% transmute(name, num_comments, is_self, score, title, hour, is_troll), 
+                 docid_field="name", text_field="title")
+  R_DFM = dfm(R_corpus, 
+              stem=TRUE, 
+              remove_punct = TRUE, 
+              remove = stopwords("english"), 
+              remove_numbers = TRUE) 
+  
+  R_DFM_trim = R_DFM %>% dfm_trim(min_docfreq = round(nrow(RM)*.005)) %>% dfm_tfidf()
+  
+  R_DFM_final = R_DFM_trim %>% dfm_remove("document") %>% 
+                dfm_replace(featnames(R_DFM_trim), make.names(featnames(R_DFM_trim)))
+  
+  set.seed(743)
+  train <- sample(1:nrow(R_DFM_final), 0.7*nrow(R_DFM_final))
+  reddit_train_X <- R_DFM_final[train,]
+    reddit_test_X <- R_DFM_final[-train,]
+  reddit_train_XM = convert(reddit_train_X, to = "matrix")
+    reddit_test_XM =  convert(reddit_test_X, to = "matrix")
+  reddit_train_Y = docvars(R_DFM_final)$is_troll[train] %>% factor(labels = c("not","TROLL"))
+    reddit_test_Y = docvars(R_DFM_final)$is_troll[-train] %>% factor(labels = c("not","TROLL"))
+  
+  m2_cv_month <- cv.glmnet(reddit_train_X, reddit_train_Y, alpha = 1, family = "binomial", type.measure="auc")
+    bestlam.month.min <- m2_cv$lambda.min
+    bestlam.month.min <- m2_cv$lambda.1se
+  p_lasso <- predict(m2_cv_month, s = bestlam.month.min, newx = reddit_test_X, type = "class") %>% factor
+    confusionMatrix(p_lasso, reddit_test_Y, positive = "TROLL", mode = "prec_recall")
+    cfm[[m-3]] = confusionMatrix(p_lasso, factor(reddit_test_Y), positive = "TROLL", mode = "prec_recall")
+    print(paste("Month = ", m))
+    print(cfm[[m-3]])
+}
+
+```
+
+
+# Random Forests
+```{r}
+cfm
+```
+
+
+```{r}
+set.seed(527)
+tuneGrid_rf = expand.grid(mtry = c(5,10))
+ctrl_rf <- trainControl(method = "cv", number = 5)
+set.seed(527)
+train_rf <- train(x = reddit_train_XM, y = reddit_train_Y, 
+                      method = "parRF2",
+                      tuneGrid = tuneGrid_rf,
+                      metric = "Kappa",
+                      trControl = ctrl)
+```
+
+```{r}
+
+```
+
+
+## Find best months
+
+```{r}
+REDDIT = REDDIT %>% mutate(month = month(date))
+cfmRF = list()
+
+RM = REDDIT
+m=6
+
+for (m in 4:9){
+  RM = REDDIT %>% filter(month==m)
+  R_corpus = corpus(RM %>% transmute(name, num_comments, is_self, score, title, hour, is_troll), 
+                 docid_field="name", text_field="title")
+  R_DFM = dfm(R_corpus, 
+              stem=TRUE, 
+              remove_punct = TRUE, 
+              remove = stopwords("english"), 
+              remove_numbers = TRUE) 
+  
+  R_DFM_trim = R_DFM %>% dfm_trim(min_docfreq = round(nrow(RM)*.01)) %>% dfm_tfidf()
+  
+  R_DFM_final = R_DFM_trim %>% dfm_remove("document") %>% 
+                dfm_replace(featnames(R_DFM_trim), make.names(featnames(R_DFM_trim)))
+  
+  set.seed(743)
+  train <- sample(1:nrow(R_DFM_final), 0.7*nrow(R_DFM_final))
+  reddit_train_X <- R_DFM_final[train,]
+    reddit_test_X <- R_DFM_final[-train,]
+  reddit_train_XM = convert(reddit_train_X, to = "matrix")
+    reddit_test_XM =  convert(reddit_test_X, to = "matrix")
+  reddit_train_Y = docvars(R_DFM_final)$is_troll[train] %>% factor(labels = c("not","TROLL"))
+    reddit_test_Y = docvars(R_DFM_final)$is_troll[-train] %>% factor(labels = c("not","TROLL"))
+  
+  set.seed(743)
+  tuneGrid_rf = expand.grid(mtry = c(20, 30, 40))
+  ctrl_rf <- trainControl(method = "cv", number = 5, classProbs = TRUE)
+  set.seed(743)
+  train_rf <- train(x = reddit_train_XM, y = reddit_train_Y, 
+                      method = "rf",
+                      tuneGrid = tuneGrid_rf,
+                      metric = "Kappa",
+                      trControl = ctrl_rf)
+
+  c_rf <- predict(train_rf, newdata = reddit_test_XM)
+  cfmRF[[m-3]] = confusionMatrix(c_rf, factor(reddit_test_Y), positive = "TROLL", mode = "prec_recall")
+    print(paste("Month = ", m))
+    print(cfmRF[[m-3]])
+  gc()
+}
+```
+
+```{r}
+tuneGrid_rf = expand.grid(mtry = c(20, 30, 40))
+ctrl_rf <- trainControl(method = "cv", number = 5, classProbs = TRUE, 
+                        savePredictions = TRUE, summaryFunction = twoClassSummary)
+  
+train_rf <- train(x = reddit_train_XM, y = reddit_train_Y, 
+                      method = "rf",
+                      tuneGrid = tuneGrid_rf,
+                      metric = "ROC",
+                      trControl = ctrl_rf)
+
+c_rf <- predict(train_rf, newdata = reddit_test_XM)
+
+
+```
+
+```{r}
+r_rf <- predict(train_rf, newdata = reddit_test_XM, type = "prob")
+ModelMetrics::auc(reddit_test_Y, c_rf)
+confusionMatrix(c_rf, factor(reddit_test_Y), positive = "TROLL", mode = "prec_recall")
+confusionMatrix(c_rf, factor(reddit_test_Y), positive = "TROLL")
+```
+
+```{r}
+dat = data.frame(obs =  relevel(reddit_test_Y, 2),
+               pred = relevel(c_rf,2),
+               TROLL = r_rf[,2])
+twoClassSummary(dat, lev = c("TROLL","not"))
+```
+
+```{r}
+predictions = r_rf[,2]
+pred = prediction(predictions, reddit_test_Y)
+performance(pred, "auc")
+perf_roc = performance(pred, "tpr","fpr")
+plot(perf_roc)
+```
+
