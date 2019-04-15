@@ -12,21 +12,23 @@ Overview
 1. Computational propaganda (20 minutes)
   - social bots, trolls, cyborgs
   - methods of identification
-  - my study
   - list of Reddit trolls
+  - explore Reddit dataset
 2. Text as data (40 minutes)
   - Document-term matrix
   - Text processing
   - Example with Reddit submission titles
+  
+***
 3. Basics of Machine Learning (1 hour)
   - Lasso regression
   - Random forests
   - Building an Ensemble learner
   - Identifying trolls on Reddit
-4. Pipeline to apply to your own data (1 hour)
+4. Pipeline to apply to your own data (30 minutes+)
 
 
-Computational propaganda
+Computational propaganda - TBD
 ========================================================
 
 ### Bullet 1
@@ -40,9 +42,10 @@ Text as Data
 <p></p>
 - Corpus = a collection of texts/documents
 - Corpora often come with metadata
-- Documents
 - Bag of words approach
-- Purpose: reduction of complexity
+  - Count of words for each document in corpus
+  - Discards word order, ignores word meaning
+  - Purpose: reduction of complexity
 
 
 Computational text analysis
@@ -89,10 +92,6 @@ Text: <span class = "sky">"X and Y are 2 Kremlin trolls! Trolling day and night 
 - combine similar terms (stemming, lemmatization)
 - create a Document-Term Matrix
 
-```r
-tokens(corpus, remove_numbers = TRUE, remove_punct = TRUE) %>% 
-   tokens_tolower() %>% tokens_wordstem() %>% tokens_remove(stopwords("en"))
-```
 
 Stemming vs Lemmatization
 ========================================================
@@ -432,27 +431,24 @@ Many different methods/classifiers
 There is no single best model that works optimally for all datasets
 
 
-Model evaluation
+Model evaluation / Metrics 
 ========================================================
 <hr>
-![accuracy](perf_acc.png) $$AAA$$
-![precision](perf_precision.png) BBB
-![recall](perf_recall.png) CCC
+need to finish
+![accuracy](perf_acc.png) 
+![precision](perf_precision.png) 
+![recall](perf_recall.png) 
 
-
-
-
-Slide With Plot
+Lasso regression
 ========================================================
+TBD
 
-![plot of chunk unnamed-chunk-2](test-figure/unnamed-chunk-2-1.png)
-
-
-
-DEL - Computational propaganda
+Random forests
 ========================================================
+TBD
 
-<div align="left">
-<img src="img01.png" width=1600 height=1200>
-</div>
+Ensemble classifier
+========================================================
+TBD
+
 

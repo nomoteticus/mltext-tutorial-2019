@@ -1,0 +1,195 @@
+---
+title: "Machine Learning in the Social Sciences"
+subtitle: "Regularized regression"
+author: "Christoph Kern"
+output: html_notebook
+---
+
+## Setup
+
+```{r results='hide', message=FALSE, warning=FALSE}
+library(quanteda)
+library(caret)
+library(glmnet)
+library(Matrix)
+library(readxl)
+library(dplyr)
+library(lubridate)
+library(readr)
+```
+
+
+## Read data
+
+NOTE: must clean and retain only useful metadata
+
+```{r}
+REDDIT = read_rds("data/RedditExeter.rds") %>% mutate(month = month(date))
+REDDIT
+```
+
+```{r explore}
+summary(REDDIT)
+plot(table(REDDIT$month, REDDIT$is_troll))
+```
+
+To reduce loading times, we only select data from one month of 2018 (June)
+
+```{r summarise}
+REDDIT_june = REDDIT %>% filter(month == 6) %>% transmute(name, num_comments, is_self, score, title, hour, is_troll)
+table(REDDIT_june$is_troll)
+```
+
+### Text processing
+
+Separate into: corpus / tokenization / pre-processing / stemming / n-grams / trim / weight
+
+```{r}
+R_corpus = corpus(REDDIT_june, docid_field="name", text_field="title")
+R_DFM = dfm(R_corpus, 
+            stem=TRUE, 
+            remove_punct = TRUE, 
+            remove = stopwords("english"), 
+            remove_numbers = TRUE) 
+
+R_DFM_trim = R_DFM %>% dfm_trim(min_docfreq = round(0.005*length(docnames(R_corpus)))) %>% 
+             dfm_tfidf()
+
+R_DFM_final = R_DFM_trim %>% dfm_remove("document") %>% 
+              dfm_replace(featnames(R_DFM_trim), make.names(featnames(R_DFM_trim)))
+```
+
+## Machine Learning
+
+Separate training set and test set
+
+```{r}
+set.seed(735)
+train <- sample(1:nrow(R_DFM_final), 0.7*nrow(R_DFM_final))
+reddit_train_X <- R_DFM_final[train,]
+reddit_test_X <- R_DFM_final[-train,]
+# sparse matrices do not work with Random Forests, so need to convert
+  reddit_train_XM = convert(reddit_train_X, to = "matrix")
+  reddit_test_XM =  convert(reddit_test_X, to = "matrix")
+reddit_train_Y = docvars(R_DFM_final)$is_troll[train] %>% factor(labels = c("not","TROLL"))
+reddit_test_Y = docvars(R_DFM_final)$is_troll[-train] %>% factor(labels = c("not","TROLL"))
+```
+
+
+### Lasso
+
+Estimate lasso model - no crossvalidation 
+
+```{r}
+m2 <- glmnet(reddit_train_X, reddit_train_Y, alpha = 1, family="binomial")
+```
+
+Plotting the coefficient paths.
+
+```{r}
+plot(m2, label=T, xvar = "lambda")
+```
+
+Estimate lasso model - crossvalidation 
+
+```{r}
+m2_cv <- cv.glmnet(reddit_train_X, reddit_train_Y, alpha = 1, family = "binomial")
+plot(m2_cv)
+```
+
+Store ideal lambdas
+
+```{r}
+bestlam1_cv <- m2_cv$lambda.min
+bestlam2_cv <- m2_cv$lambda.1se
+```
+
+Check coefficients
+```{r}
+coef_lasso = coef(m2_cv, s = "lambda.min") %>% as.vector
+names(coef_lasso) = featnames(reddit_train_X)
+print("Features: TROLL")
+coef_lasso %>% sort %>% rev %>%  head(25)
+print("Features: NOT troll")
+coef_lasso %>% sort %>% head(25)
+```
+
+
+### Prediction in test set
+
+Confusion matrix for cross-validated
+
+```{r}
+p_lasso <- predict(m2_cv, s = bestlam1_cv, newx = reddit_test_X, type = "class") %>% factor
+cfm = confusionMatrix(p_lasso, factor(reddit_test_Y), positive = "TROLL", mode = "prec_recall")
+cfm
+```
+
+## Caret
+
+### Lasso within caret
+
+Build pipeline
+
+```{r}
+set.seed(527)
+tuneGrid_glm = expand.grid(alpha = c(1), lambda = 10^seq(-7, 3, length = 20) %>% round(7) )
+
+ctrl <- trainControl(method = "cv", number = 5,
+                     classProbs = TRUE, summaryFunction = prSummary)
+set.seed(527)
+train_lasso <- train(x = reddit_train_XM, y = reddit_train_Y, 
+                     method = "glmnet",
+                     tuneGrid = tuneGrid_glm,
+                     metric = "AUC",
+                     trControl = ctrl)
+train_lasso
+```
+
+Check accuracy on test set
+
+```{r}
+p_lasso <- predict(up_inside, newdata = reddit_test_XM, type = "raw")
+cfm = confusionMatrix(p_lasso, reddit_test_Y, positive = "TROLL", mode = "prec_recall")
+cfm
+```
+
+### Random Forests
+
+Train and cross-validate to get optimally tuned hyperparameters
+
+```{r}
+tuneGrid_rf = expand.grid(mtry = c(20, 30))
+ctrl_rf <- trainControl(method = "cv", number = 5, classProbs = TRUE, 
+                        savePredictions = TRUE, summaryFunction = twoClassSummary)
+  
+train_rf <- train(x = reddit_train_XM, y = reddit_train_Y, 
+                      method = "rf",
+                      tuneGrid = tuneGrid_rf,
+                      metric = "ROC",
+                      trControl = ctrl_rf)
+train_rf
+```
+
+Predict on test set
+
+```{r}
+c_rf <- predict(train_rf, newdata = reddit_test_XM)
+r_rf <- predict(train_rf, newdata = reddit_test_XM, type = "prob")
+confusionMatrix(c_rf, factor(reddit_test_Y), positive = "TROLL", mode = "prec_recall")
+confusionMatrix(c_rf, factor(reddit_test_Y), positive = "TROLL")
+```
+
+Calculate AUC
+```{r}
+dat = data.frame(obs =  relevel(reddit_test_Y, 2),
+               pred = relevel(c_rf,2),
+               TROLL = r_rf[,2])
+twoClassSummary(dat, lev = c("TROLL","not"))
+```
+
+Feature importance - TBD
+Partial dependence plots - TBD
+
+## Create an ensemble - TBD
+
