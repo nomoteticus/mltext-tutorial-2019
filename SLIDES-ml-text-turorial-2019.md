@@ -25,7 +25,7 @@ Overview
   - Random forests
   - Building an Ensemble learner
   - Identifying trolls on Reddit
-4. Pipeline to apply to your own data (30 minutes+)
+4. Pipeline to apply to your own data or improve model on Reddit (30 minutes+)
 
 
 Computational propaganda - TBD
@@ -46,6 +46,8 @@ Text as Data
   - Count of words for each document in corpus
   - Discards word order, ignores word meaning
   - Purpose: reduction of complexity
+- Pre-processing steps:
+  - tokenization
 
 
 Computational text analysis
@@ -56,14 +58,23 @@ Computational text analysis
 Not covered in this seminar
 ========================================================
 <hr><p></p>
-- Part of Speech (POS) tagging
-- Named entity recognition (NER)
-- Word Sense Disambiguation (WordNet)
+- Part of Speech (POS) tagging<br>
+- Named entity recognition (NER)<br>
+- Word Sense Disambiguation (WordNet)<br>
 - Word embeddings (word2vec)
 
 
-
-
+Scraping data from Reddit
+========================================================
+- manual html scraping 
+  - BeautifulSoup / rvest 
+  - not reccomended
+- using Reddit API
+  - PRAW / RedditExtractoR
+  - limited to 1000 items
+- downloading from www.pushshift.io/reddit
+  - submissions
+  - comments
 
 Tokenization
 ========================================================
@@ -86,9 +97,11 @@ class: small-code
 <hr>
 
 Text: <span class = "sky">"X and Y are 2 Kremlin trolls! Trolling day and night for a few rubles."</span>
-- remove capitalization <br><span class="sky">Putin -> putin</span>
+- remove capitalization <br><span class="sky">Kremlin -> kremlin</span>
 - remove stopwords <br><span class="sky">!["and","a","for","few","here"]</span>
 - (remove non-words: numbers, punctuation) <span class="sky"><br>["2","!","."]</span>
+
+Next steps:
 - combine similar terms (stemming, lemmatization)
 - create a Document-Term Matrix
 
@@ -267,7 +280,7 @@ $$w_{i,j} = tf_{i,j}\cdot log(\frac{N}{df_{i}})$$
 
 Machine learning
 ========================================================
-class: at75 
+class: at70 
 <hr>
 #### Goal: building a statistical model for predicting or estimating an output based on one or more inputs
   - <b>X</b> = Inputs / Features
@@ -310,16 +323,15 @@ class: at75
 
 ***
 <br>
-### Supervised machine learning
+### Supervised ML
 - learn mapping from inputs to outputs given a labeled set of input-output pairs
 - use mapping on new (unlabeled) inputs
 - task depends on measurement level of Y
-  - Y is categorical: classification 
+  - Y is categorical: classification (2+ classes)
   - Y is continuous: regression
-<br>
 
-### <br>Unupervised machine learning
-- find patterns in data given only inputs
+### <br>Unupervised ML
+- find patterns in data given only inputs <br>(no Y)
 - e.g. clustering
 
 Supervised machine learning for document classification
@@ -441,7 +453,7 @@ need to finish
 
 Lasso regression
 ========================================================
-TBD
+Motivation - large number of features K>>N
 
 Random forests
 ========================================================
@@ -450,5 +462,15 @@ TBD
 Ensemble classifier
 ========================================================
 TBD
+
+Supervised machine learning / Summary
+========================================================
+(I can use the )
+
+Other uses with comments/tweets
+========================================================
+- Tory vs Labour
+- Remain vs Leave
+- Democrat vs Republican
 
 

@@ -1,7 +1,7 @@
 .reveal ul, 
 .reveal ol {
 	font-size: 90%;
-	margin-bottom: 20px
+	margin-bottom: 20px;
 	margin-top: 10px;
 }
 .reveal p {
@@ -9,6 +9,7 @@
 }
 
 .reveal .at75 {font-size:75%; margin-bottom: 5px; margin-top: 5px;}
+.reveal .at70 {font-size:70%; margin-bottom: 5px; margin-top: 5px;}
 .reveal .at150 {font-size:150%;}
 
 .reveal .sky {
@@ -17,10 +18,10 @@
 } 
 
 .reveal .tg {font-family:Arial; font-size: 60%;}
-.reveal .tg2 {font-family:Arial; font-size: 40%;margin-bottom: 5px; margin-top: 1px; padding:1px;}
-.reveal .tg3 {font-family:Arial; text=align:center; font-size: 80%}
-.reveal .tg3 {font-family:Arial; text=align:center; font-size: 70%}
-.reveal .tg-emp {color:#34cdf9; border-color:inherit; text-align:left}
+.reveal .tg2 {font-family:Arial; font-size: 40%;margin-bottom: 5px; margin-top: 1px; padding: 1px;}
+.reveal .tg3 {font-family:Arial; text-align:center; font-size: 80%;}
+.reveal .tg3 {font-family:Arial; text-align:center; font-size: 70%;}
+.reveal .tg-emp {color:#34cdf9; border-color:inherit; text-align:left;}
 
 
 .small-code pre code {

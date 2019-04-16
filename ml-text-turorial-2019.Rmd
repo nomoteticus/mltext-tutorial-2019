@@ -1,7 +1,6 @@
 ---
-title: "Machine Learning in the Social Sciences"
-subtitle: "Regularized regression"
-author: "Christoph Kern"
+title: "Introduction to Supervised Machine Learning with text data"
+author: "Vlad Achimescu"
 output: html_notebook
 ---
 
@@ -37,7 +36,8 @@ To reduce loading times, we only select data from one month of 2018 (June)
 
 ```{r summarise}
 REDDIT_june = REDDIT %>% filter(month == 6) %>% transmute(name, num_comments, is_self, score, title, hour, is_troll)
-table(REDDIT_june$is_troll)
+REDDIT_may = REDDIT %>% filter(month == 6) %>% transmute(name, num_comments, is_self, score, title, hour, is_troll)
+table(REDDIT_may$is_troll)
 ```
 
 ### Text processing
@@ -45,18 +45,60 @@ table(REDDIT_june$is_troll)
 Separate into: corpus / tokenization / pre-processing / stemming / n-grams / trim / weight
 
 ```{r}
-R_corpus = corpus(REDDIT_june, docid_field="name", text_field="title")
-R_DFM = dfm(R_corpus, 
-            stem=TRUE, 
-            remove_punct = TRUE, 
-            remove = stopwords("english"), 
-            remove_numbers = TRUE) 
+R_corpus = corpus(REDDIT_may, docid_field="name", text_field="title")
+R_corpus
+```
+
+Tokenize
+
+```{r}
+tokens(R_corpus, what = c("sentence"))[1:5]
+tokens(R_corpus, what = c("word"))[1:5]
+tokens(R_corpus, what = c("character"))[1:5]
+```
+
+```{r tokenize words}
+R_tokens = tokens(R_corpus, what = c("word"))
+R_tokens[1:5]
+print("Token lengths: "); cat("\n\n")
+print(sapply(R_tokens[1:5], length))
+```
+
+```{r}
+R_tokens_cleaned = tokens(R_tokens, remove_numbers = TRUE, 
+                      remove_punct = TRUE, 
+                      remove_symbols = TRUE, 
+                      remove_separators = TRUE,
+                      remove_hyphens = FALSE) %>% 
+                  tokens_tolower()
+R_tokens_cleaned[1:5]
+print("Token lengths: "); cat("\n")
+print(sapply(R_tokens[1:5], length))
+```
+
+Stem
+
+```{r}
+R_tokens_stemmed = R_tokens_cleaned %>% tokens_wordstem(language = "en")
+R_tokens_stemmed[1:5]
+```
+
+
+Create document-term-matrix
+
+```{r}
+R_DFM = dfm(R_tokens_stemmed) 
 
 R_DFM_trim = R_DFM %>% dfm_trim(min_docfreq = round(0.005*length(docnames(R_corpus)))) %>% 
              dfm_tfidf()
 
 R_DFM_final = R_DFM_trim %>% dfm_remove("document") %>% 
               dfm_replace(featnames(R_DFM_trim), make.names(featnames(R_DFM_trim)))
+```
+
+
+```{r All-in-one}
+
 ```
 
 ## Machine Learning
@@ -109,9 +151,10 @@ Check coefficients
 coef_lasso = coef(m2_cv, s = "lambda.min") %>% as.vector
 names(coef_lasso) = featnames(reddit_train_X)
 print("Features: TROLL")
-coef_lasso %>% sort %>% rev %>%  head(25)
+coef_lasso %>% sort %>% rev %>%  head(50)
+cat("\n")
 print("Features: NOT troll")
-coef_lasso %>% sort %>% head(25)
+coef_lasso %>% sort %>% head(50)
 ```
 
 
@@ -132,12 +175,12 @@ cfm
 Build pipeline
 
 ```{r}
-set.seed(527)
+set.seed(773)
 tuneGrid_glm = expand.grid(alpha = c(1), lambda = 10^seq(-7, 3, length = 20) %>% round(7) )
 
 ctrl <- trainControl(method = "cv", number = 5,
                      classProbs = TRUE, summaryFunction = prSummary)
-set.seed(527)
+set.seed(773)
 train_lasso <- train(x = reddit_train_XM, y = reddit_train_Y, 
                      method = "glmnet",
                      tuneGrid = tuneGrid_glm,
@@ -149,9 +192,18 @@ train_lasso
 Check accuracy on test set
 
 ```{r}
-p_lasso <- predict(up_inside, newdata = reddit_test_XM, type = "raw")
-cfm = confusionMatrix(p_lasso, reddit_test_Y, positive = "TROLL", mode = "prec_recall")
+c_lasso <- predict(train_lasso, newdata = reddit_test_XM, type = "raw")
+p_lasso <- predict(train_lasso, newdata = reddit_test_XM, type = "prob")
+cfm = confusionMatrix(c_lasso, reddit_test_Y, positive = "TROLL", mode = "prec_recall")
 cfm
+```
+
+Calculate AUC
+```{r}
+dat_lasso = data.frame(obs =  relevel(reddit_test_Y, 2),
+               pred = relevel(c_lasso,2),
+               TROLL = p_lasso[,2])
+twoClassSummary(dat_lasso, lev = c("TROLL","not"))
 ```
 
 ### Random Forests
