@@ -23,38 +23,55 @@ library(readr)
 NOTE: must clean and retain only useful metadata
 
 ```{r}
-REDDIT = read_rds("data/RedditExeter.rds") %>% mutate(month = month(date))
+REDDIT = read_rds("data/RedditExeter.rds")
 REDDIT
 ```
 
 ```{r explore}
 summary(REDDIT)
-plot(table(REDDIT$month, REDDIT$is_troll))
 ```
 
-To reduce loading times, we only select data from one month of 2018 (June)
+List of Trolls
+```{r}
+trolls = factor(REDDIT$author[REDDIT$is_troll=="TROLL"])
+print(paste("Number of identified trolls: ", length(trolls)))
+table(trolls)
+```
+
+List of subreddits
+```{r}
+table(REDDIT$subreddit, REDDIT$is_troll)
+```
+
+
+To reduce loading times, we only select data from one month of 2018 (may)
 
 ```{r summarise}
-REDDIT_june = REDDIT %>% filter(month == 6) %>% transmute(name, num_comments, is_self, score, title, hour, is_troll)
-REDDIT_may = REDDIT %>% filter(month == 6) %>% transmute(name, num_comments, is_self, score, title, hour, is_troll)
+REDDIT_may = REDDIT[REDDIT$month=="May",]
 table(REDDIT_may$is_troll)
 ```
+
 
 ### Text processing
 
 Separate into: corpus / tokenization / pre-processing / stemming / n-grams / trim / weight
 
 ```{r}
-R_corpus = corpus(REDDIT_may, docid_field="name", text_field="title")
+R_corpus = corpus(REDDIT_may[,c("id","title",
+                                "hour","num_comments_log","logscore",
+                                "is_self","self_text","is_troll")], 
+                  docid_field="id", 
+                  text_field="title")
+names(docvars(R_corpus)) = paste0("META_",names(docvars(R_corpus)))
 R_corpus
 ```
 
 Tokenize
 
 ```{r}
-tokens(R_corpus, what = c("sentence"))[1:5]
-tokens(R_corpus, what = c("word"))[1:5]
-tokens(R_corpus, what = c("character"))[1:5]
+tokens(R_corpus, what = c("sentence"))[1:2]
+tokens(R_corpus, what = c("word"))[1:2]
+tokens(R_corpus, what = c("character"))[1:2]
 ```
 
 ```{r tokenize words}
@@ -64,13 +81,18 @@ print("Token lengths: "); cat("\n\n")
 print(sapply(R_tokens[1:5], length))
 ```
 
+Remove unnecessary tokens
+
 ```{r}
-R_tokens_cleaned = tokens(R_tokens, remove_numbers = TRUE, 
-                      remove_punct = TRUE, 
-                      remove_symbols = TRUE, 
-                      remove_separators = TRUE,
-                      remove_hyphens = FALSE) %>% 
-                  tokens_tolower()
+R_tokens_cleaned = R_tokens %>%
+                   tokens_tolower() %>%
+                   tokens(R_tokens, remove_numbers = TRUE, 
+                        remove_punct = TRUE, 
+                        remove_symbols = TRUE, 
+                        remove_separators = TRUE,
+                        remove_hyphens = FALSE) %>%
+                   tokens_remove(stopwords("en"))
+                 
 R_tokens_cleaned[1:5]
 print("Token lengths: "); cat("\n")
 print(sapply(R_tokens[1:5], length))
@@ -84,21 +106,73 @@ R_tokens_stemmed[1:5]
 ```
 
 
-Create document-term-matrix
+Create document-feature-matrix (DFM)
 
 ```{r}
 R_DFM = dfm(R_tokens_stemmed) 
+cat("\nInitial sparsity: \n")
+R_DFM
+```
 
-R_DFM_trim = R_DFM %>% dfm_trim(min_docfreq = round(0.005*length(docnames(R_corpus)))) %>% 
-             dfm_tfidf()
+Trim DFM
+```{r}
+### Trim options
+cat("\nFinal sparsity: \n")
 
-R_DFM_final = R_DFM_trim %>% dfm_remove("document") %>% 
-              dfm_replace(featnames(R_DFM_trim), make.names(featnames(R_DFM_trim)))
+dfm_trim(R_DFM, min_termfreq =  10)
+dfm_trim(R_DFM, min_termfreq = 100)
+dfm_trim(R_DFM, min_docfreq =   10)
+dfm_trim(R_DFM, min_docfreq =  100)
+
+###
+cat("\nFinal sparsity: \n")
+R_DFM_trim = dfm_trim(R_DFM, min_docfreq = 0.005,
+                             max_docfreq = 0.900,
+                             docfreq_type = "prop")
+R_DFM_trim
+```
+
+Clean and display
+```{r}
+### clean: replace feature names that are not valid variable names
+R_DFM_cleaned = dfm_replace(R_DFM_trim, 
+                            featnames(R_DFM_trim), 
+                            make.names(featnames(R_DFM_trim, unique = TRUE)))
+R_DFM_cleaned
+R_DFM_cleaned[1:10,1:10]
+```
+
+Working with DFM
+```{r}
+cat("First ten document names:\n")
+  docnames(R_DFM_cleaned)[1:10]
+cat("First ten feature names:\n")
+  featnames(R_DFM_cleaned)[1:10]
+cat("Names of features in metadata:\n")
+  names(docvars(R_DFM_cleaned))
+```
+
+
+Explore dfm
+```{r}
+topfeatures(R_DFM_cleaned, groups = docvars(R_DFM_final)$META_is_troll)
+```
+
+Weight DFM
+```{r}
+R_DFM_prop = R_DFM_cleaned %>% dfm_weight("prop")
+R_DFM_TFIDF = R_DFM_cleaned %>% dfm_tfidf(scheme_tf = "count")
+R_DFM_TFIDF_prop = R_DFM_cleaned %>% dfm_tfidf(scheme_tf="prop")
+cat("Compare values weighted/unweighted:\n")
+R_DFM_cleaned[1:5,1:5]
+R_DFM_prop[1:5,1:5]
+R_DFM_TFIDF[1:5,1:5]
+R_DFM_TFIDF_prop[1:5,1:5]
 ```
 
 
 ```{r All-in-one}
-
+R_DFM_final = R_DFM_TFIDF
 ```
 
 ## Machine Learning
@@ -106,15 +180,22 @@ R_DFM_final = R_DFM_trim %>% dfm_remove("document") %>%
 Separate training set and test set
 
 ```{r}
+X = cbind(convert(R_DFM_final, to = "data.frame")[,-1],
+          docvars(R_DFM_final)) 
+X = model.matrix(META_is_troll~., X)
+View(X[1:20,])
+```
+
+
+```{r}
 set.seed(735)
 train <- sample(1:nrow(R_DFM_final), 0.7*nrow(R_DFM_final))
-reddit_train_X <- R_DFM_final[train,]
-reddit_test_X <- R_DFM_final[-train,]
-# sparse matrices do not work with Random Forests, so need to convert
-  reddit_train_XM = convert(reddit_train_X, to = "matrix")
-  reddit_test_XM =  convert(reddit_test_X, to = "matrix")
-reddit_train_Y = docvars(R_DFM_final)$is_troll[train] %>% factor(labels = c("not","TROLL"))
-reddit_test_Y = docvars(R_DFM_final)$is_troll[-train] %>% factor(labels = c("not","TROLL"))
+length(train)
+###
+reddit_train_X <- X[train,]
+  reddit_test_X <- X[-train,]
+reddit_train_Y = docvars(R_DFM_final)$META_is_troll[train]
+  reddit_test_Y = docvars(R_DFM_final)$META_is_troll[-train] 
 ```
 
 
@@ -135,7 +216,7 @@ plot(m2, label=T, xvar = "lambda")
 Estimate lasso model - crossvalidation 
 
 ```{r}
-m2_cv <- cv.glmnet(reddit_train_X, reddit_train_Y, alpha = 1, family = "binomial")
+m2_cv <- cv.glmnet(reddit_train_X, reddit_train_Y, alpha = 1, family = "binomial", type.measure="auc")
 plot(m2_cv)
 ```
 
@@ -149,7 +230,7 @@ bestlam2_cv <- m2_cv$lambda.1se
 Check coefficients
 ```{r}
 coef_lasso = coef(m2_cv, s = "lambda.min") %>% as.vector
-names(coef_lasso) = featnames(reddit_train_X)
+names(coef_lasso) = colnames(reddit_train_X)
 print("Features: TROLL")
 coef_lasso %>% sort %>% rev %>%  head(50)
 cat("\n")
@@ -176,15 +257,17 @@ Build pipeline
 
 ```{r}
 set.seed(773)
-tuneGrid_glm = expand.grid(alpha = c(1), lambda = 10^seq(-7, 3, length = 20) %>% round(7) )
+tuneGrid_glm = expand.grid(alpha = c(1), 
+                           lambda = 10^seq(-4, -1, length = 20) )
 
 ctrl <- trainControl(method = "cv", number = 5,
-                     classProbs = TRUE, summaryFunction = prSummary)
+                     classProbs = TRUE, 
+                     summaryFunction = prSummary)
 set.seed(773)
-train_lasso <- train(x = reddit_train_XM, y = reddit_train_Y, 
+train_lasso <- train(x = reddit_train_X, y = reddit_train_Y, 
                      method = "glmnet",
+                     metric = "F",
                      tuneGrid = tuneGrid_glm,
-                     metric = "AUC",
                      trControl = ctrl)
 train_lasso
 ```
@@ -192,8 +275,8 @@ train_lasso
 Check accuracy on test set
 
 ```{r}
-c_lasso <- predict(train_lasso, newdata = reddit_test_XM, type = "raw")
-p_lasso <- predict(train_lasso, newdata = reddit_test_XM, type = "prob")
+c_lasso <- predict(train_lasso, newdata = reddit_test_X, type = "raw")
+p_lasso <- predict(train_lasso, newdata = reddit_test_X, type = "prob")
 cfm = confusionMatrix(c_lasso, reddit_test_Y, positive = "TROLL", mode = "prec_recall")
 cfm
 ```
@@ -201,9 +284,10 @@ cfm
 Calculate AUC
 ```{r}
 dat_lasso = data.frame(obs =  relevel(reddit_test_Y, 2),
-               pred = relevel(c_lasso,2),
-               TROLL = p_lasso[,2])
-twoClassSummary(dat_lasso, lev = c("TROLL","not"))
+                       pred = relevel(c_lasso,2),
+                       TROLL = p_lasso[,2])
+twoClassSummary(dat_lasso, lev = c("TROLL","not_troll"))
+prSummary(dat_lasso, lev = c("TROLL","not_troll"))
 ```
 
 ### Random Forests
@@ -211,11 +295,11 @@ twoClassSummary(dat_lasso, lev = c("TROLL","not"))
 Train and cross-validate to get optimally tuned hyperparameters
 
 ```{r}
-tuneGrid_rf = expand.grid(mtry = c(20, 30))
+tuneGrid_rf = expand.grid(mtry = c(10, 15, 20, 25))
 ctrl_rf <- trainControl(method = "cv", number = 5, classProbs = TRUE, 
                         savePredictions = TRUE, summaryFunction = twoClassSummary)
   
-train_rf <- train(x = reddit_train_XM, y = reddit_train_Y, 
+train_rf <- train(x = reddit_train_X, y = reddit_train_Y, 
                       method = "rf",
                       tuneGrid = tuneGrid_rf,
                       metric = "ROC",
@@ -226,8 +310,8 @@ train_rf
 Predict on test set
 
 ```{r}
-c_rf <- predict(train_rf, newdata = reddit_test_XM)
-r_rf <- predict(train_rf, newdata = reddit_test_XM, type = "prob")
+c_rf <- predict(train_rf, newdata = reddit_test_X)
+r_rf <- predict(train_rf, newdata = reddit_test_X, type = "prob")
 confusionMatrix(c_rf, factor(reddit_test_Y), positive = "TROLL", mode = "prec_recall")
 confusionMatrix(c_rf, factor(reddit_test_Y), positive = "TROLL")
 ```
@@ -237,11 +321,56 @@ Calculate AUC
 dat = data.frame(obs =  relevel(reddit_test_Y, 2),
                pred = relevel(c_rf,2),
                TROLL = r_rf[,2])
-twoClassSummary(dat, lev = c("TROLL","not"))
+twoClassSummary(dat, lev = c("TROLL","not_troll"))
+prSummary(dat, lev = c("TROLL","not_troll"))
 ```
 
-Feature importance - TBD
-Partial dependence plots - TBD
+Feature importance
+
+```{r}
+varImp(train_rf)
+```
+
+Partial dependence plots
+
+```{r, fig.align="center"}
+library(pdp)
+pdp1 <- partial(train_rf, pred.var = "META_hour", trim.outliers = T, grid.resolution=24, 
+                type = "classification", prob=TRUE, which.class = "TROLL")
+plotPartial(pdp1, train = reddit_train_X, rug = TRUE, alpha = 0.3)
+```
+
 
 ## Create an ensemble - TBD
+
+```{r}
+ctrl <- trainControl(method = "cv", number = 5,
+                     classProbs = TRUE, 
+                     summaryFunction = prSummary,
+                     savePredictions = TRUE)
+
+train_lasso1 <- train(x = reddit_train_X, y = reddit_train_Y, 
+                     method = "glmnet",
+                     metric = "F",
+                     tuneGrid = tuneGrid_glm,
+                     trControl = ctrl)
+train_lasso2 <- train(x = reddit_train_X[,1:218], y = reddit_train_Y, 
+                     method = "glmnet",
+                     metric = "F",
+                     tuneGrid = tuneGrid_glm,
+                     trControl = ctrl)
+
+
+model.list <- list( train_lasso1, train_lasso2)
+class(model.list) <- "caretList"
+caretEnsemble(model.list, method='glmnet')
+```
+
+
+## Predict on new test set
+
+```{r}
+Y_test_later = 
+```
+
 
