@@ -6,6 +6,9 @@
 .RData
 
 # Example code
+no_upload/
+
+# Example code
 *-Ex.R
 *_draft.R
 
