@@ -455,6 +455,11 @@ Lasso regression
 ========================================================
 Motivation - large number of features K>>N
 
+Advantages of LASSO <i>(Schreiber-Gregory, 2018)</i>
+- feature selection: reduces the number of variables in a model
+- control for multicollinearity 
+- enforces sparcity in parameter selection and inclusion
+
 Random forests
 ========================================================
 TBD

@@ -339,4 +339,3 @@ performance(pred, "auc")
 perf_roc = performance(pred, "tpr","fpr")
 plot(perf_roc)
 ```
-
