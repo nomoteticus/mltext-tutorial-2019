@@ -50,38 +50,48 @@ class: at75
 State-sponsored trolling
 ========================================================
 <hr>
-![russian](pics/trollarmy_Russia.png)<br>
+![russian](pics/trollarmy_Russia2.png)<br>
 ![iranian](pics/trollarmy_Iran.png)<br>
-![indian](pics/trollarmy_india.png)<br>
+![indian](pics/trollarmy_India.png)<br>
 
 Labeling propaganda
 ========================================================
 class: at70
 <hr>
 1. Hand coding by researchers
-  - 
+  - Sanovich et al. 2015
 2. Use pre-existing labels:
   - official flags
-      - s
+      - Im Jane et al. 2019
   - informal flags
-      - s
-      - s
+      - Mihaylov and Preslav 2016
+      - Achimescu, Sultanescu and Sultanescu 2018
+          - <a href = "https://www.bigsurv18.org/program?sess=56">BigSurv2018 conference</a>
+          - <a href = "https://www.gor.de/gor19/index.php?page=browseSessions&form_session=22&presentations=show">Poster at GOR2019 conference</a>
     
 ***
 
 <br>
 #### Example of informal flag:<br>
+![informal_flag](pics/informalflag.png)<br>
 ##### (Achimescu, Sultanescu, Sultanescu 2018)<br>
 
 
 Official flags
 ========================================================
-- Twitter
-- Facebook
-- Reddit
+class: at70
+U.S. congress investigations and/or information provided by the platforms themselves
+<br>
 
-
-IMAGE HERE
+- Twitter: 
+    - 10 million tweets by around 4,600 Russian and Iranian-linked propaganda accounts
+    - https://www.politico.eu/article/how-twitter-bots-and-trump-fans-made-releasethememo-go-viral/
+    - https://democrats-intelligence.house.gov/uploadedfiles/exhibit_b.pdf
+- Facebook ads
+    - https://democrats-intelligence.house.gov/social-media-content/social-media-advertisements.htm
+    - https://mith.umd.edu/irads/items/tags
+- Reddit: suspect accounts
+    - https://www.reddit.com/r/announcements/comments/8bb85p/reddits_2017_transparency_report_and_suspect/
 
 Scraping data from Reddit
 ========================================================
@@ -155,6 +165,7 @@ Not covered in this seminar
 - Word Sense Disambiguation (WordNet)<br>
 - Word embeddings (word2vec)
 
+- Deep learning
 
 
 Tokenization
@@ -562,13 +573,33 @@ Many different methods/classifiers:
 There is no single best model that works optimally for all datasets
 
 
-Model evaluation / Metrics 
+Model evaluation  
 ========================================================
 <hr>
-need to finish
-![accuracy](pics/perf_acc.png) 
-![precision](pics/perf_precision.png) 
-![recall](pics/perf_recall.png) 
+Confusion matrix: TRUE/FALSE positives/negatives
+<br>
+<table>
+  <tr>
+    <th>Accuracy</th>
+    <th>Precision</th>
+    <th>Recall</th>
+  </tr>
+  <tr>
+    <td><img src="pics/perf_acc.png"></img> </td>
+    <td><img src="pics/perf_precision.png"></img> </td>
+    <td><img src="pics/perf_recall.png"></img> </td>
+  </tr>
+  <tr>
+    <td>$\frac{TP+TN}{TP+FP+FN+TN}$</td>
+    <td>$\frac{TP}{TP+FP}$</td>
+    <td>$\frac{TP}{TP+FN}$</td>
+  </tr>
+</table>
+
+F1 is a balanced measure of precision and recall<br><br>
+$F1 = 2*\frac{precision*recall}{precision+recall}$
+
+
 
 Supervised ML - summary
 ========================================================
@@ -605,10 +636,9 @@ class: at75
 <hr>
 Maximizes the penalized log-likelihood:<br>
 
-$$ a+b $$
+$$ \underset{\beta_{0},\beta}{max} \left \{ \sum_{i=1}^{N}\left [ y_{i}( \beta_{0} + \beta^{T}x_{i})-log(1+e^{ \beta_{0} + beta^{T}x_{i}}) \right ] - \lambda\sum_{j=1}^{p}\left | \beta_{j} \right | \right \} $$
 
-Lambda is the tuning parameter
-- lambda=0: no penalization
+- tuning parameter lambda=0: no penalization
 - max(lambda): all coefficients = 0
 
 ![lasso_shrinkage](pics/lasso2b.png) 
@@ -633,7 +663,8 @@ class: at70
 - partition of the feature space
 - good for capturing interaction effects
 - can overfit training data
-!!! ADD GRAPH !!!
+
+![alt text](pics/CART.png)
 
 
 Random forests
@@ -644,7 +675,7 @@ class: at70
 - Disadvantage: computationally intensive, noise increases misclassification
 - Algorithm: grow B trees and average prediction across all of them
 ![random_forests_algo](pics/RandomForests.png)
-<br>(Hastie, Tibshirani and  2018)
+<br>(Hastie, Tibshirani and Friedman 2018)
 
 Let's grow a forest!
 ========================================================
@@ -668,5 +699,4 @@ Other uses with comments/tweets
 References
 ========================================================
 <hr>
-coming soon
-
+...coming soon

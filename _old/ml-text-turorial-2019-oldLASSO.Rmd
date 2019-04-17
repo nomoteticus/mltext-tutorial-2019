@@ -239,35 +239,13 @@ reddit_train_Y = docvars(R_DFM_final)$META_is_troll[train]
 
 ### Lasso
 
-Build pipeline in caret
+Estimate lasso model - no crossvalidation 
 
 ```{r}
-library(caret)
-set.seed(773)
-
-### Setting values for hyperparameters
-tuneGrid_glm = expand.grid(alpha = c(1), 
-                           lambda = 10^seq(-4, -1, length = 20) )
-
-### Specifying cross-validation method
-ctrl <- trainControl(method = "cv", number = 5,
-                     classProbs = TRUE, 
-                     summaryFunction = prSummary)
-tuneGrid_glm
+m2 <- glmnet(reddit_train_X, reddit_train_Y, alpha = 1, family="binomial")
 ```
 
-Training the model
-
-```{r}
-### 
-train_lasso <- train(x = reddit_train_X, y = reddit_train_Y, 
-                     method = "glmnet",
-                     metric = "F",
-                     tuneGrid = tuneGrid_glm,
-                     trControl = ctrl)
-train_lasso
-```
-
+Plotting the coefficient paths.
 
 ```{r}
 #plot(m2, label=T, xvar = "lambda")
@@ -275,30 +253,29 @@ train_lasso
 plot(train_lasso, label=T, xvar = "lambda")
 ```
 
-Get final model
-```{r}
-finalModel_lasso = train_lasso$finalModel
-bestTune_lasso  = train_lasso$bestTune
-bestTune_lasso
-```
-
-
-Plotting the coefficient paths.
+Estimate lasso model - crossvalidation 
 
 ```{r}
-plot(finalModel_lasso, label=T, xvar = "lambda")
+m2_cv <- cv.glmnet(reddit_train_X, reddit_train_Y, alpha = 1, family = "binomial", type.measure="auc")
+plot(m2_cv)
 ```
 
+Store ideal lambdas
+
+```{r}
+bestlam1_cv <- m2_cv$lambda.min
+bestlam2_cv <- m2_cv$lambda.1se
+```
 
 Check coefficients
 ```{r}
-coef_lasso = coef(finalModel_lasso, bestTune_lasso$lambda) %>% as.vector
-  names(coef_lasso) = colnames(reddit_train_X)
+coef_lasso = coef(m2_cv, s = "lambda.min") %>% as.vector
+names(coef_lasso) = colnames(reddit_train_X)
 print("Features: TROLL")
-  coef_lasso %>% sort %>% rev %>%  head(30)
+coef_lasso %>% sort %>% rev %>%  head(50)
 cat("\n")
 print("Features: NOT troll")
-  coef_lasso %>% sort %>% head(30)
+coef_lasso %>% sort %>% head(50)
 ```
 
 
@@ -307,16 +284,51 @@ print("Features: NOT troll")
 Confusion matrix for cross-validated
 
 ```{r}
-p_lasso <- predict(finalModel_lasso, 
-                   s = bestTune_lasso$lambda, 
-                   newx = reddit_test_X, type = "class") %>% factor
-cfm = confusionMatrix(p_lasso, 
-                      reddit_test_Y, 
-                      positive = "TROLL", 
-                      mode = "prec_recall")
+p_lasso <- predict(m2_cv, s = bestlam1_cv, newx = reddit_test_X, type = "class") %>% factor
+cfm = confusionMatrix(p_lasso, factor(reddit_test_Y), positive = "TROLL", mode = "prec_recall")
 cfm
 ```
 
+## Caret
+
+### Lasso within caret
+
+Build pipeline
+
+```{r}
+set.seed(773)
+tuneGrid_glm = expand.grid(alpha = c(1), 
+                           lambda = 10^seq(-4, -1, length = 20) )
+
+ctrl <- trainControl(method = "cv", number = 5,
+                     classProbs = TRUE, 
+                     summaryFunction = prSummary)
+set.seed(773)
+train_lasso <- train(x = reddit_train_X, y = reddit_train_Y, 
+                     method = "glmnet",
+                     metric = "F",
+                     tuneGrid = tuneGrid_glm,
+                     trControl = ctrl)
+train_lasso
+```
+
+Check accuracy on test set
+
+```{r}
+c_lasso <- predict(train_lasso, newdata = reddit_test_X, type = "raw")
+p_lasso <- predict(train_lasso, newdata = reddit_test_X, type = "prob")
+cfm = confusionMatrix(c_lasso, reddit_test_Y, positive = "TROLL", mode = "prec_recall")
+cfm
+```
+
+Calculate AUC
+```{r}
+dat_lasso = data.frame(obs =  relevel(reddit_test_Y, 2),
+                       pred = relevel(c_lasso,2),
+                       TROLL = p_lasso[,2])
+twoClassSummary(dat_lasso, lev = c("TROLL","not_troll"))
+prSummary(dat_lasso, lev = c("TROLL","not_troll"))
+```
 
 ### Random Forests
 
