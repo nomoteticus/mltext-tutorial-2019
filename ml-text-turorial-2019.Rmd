@@ -10,7 +10,6 @@ output: html_notebook
 library(quanteda)
 library(caret)
 library(glmnet)
-library(Matrix)
 library(readxl)
 library(dplyr)
 library(lubridate)
@@ -341,7 +340,6 @@ Predict on test set
 c_rf <- predict(train_rf, newdata = reddit_test_X)
 r_rf <- predict(train_rf, newdata = reddit_test_X, type = "prob")
 confusionMatrix(c_rf, factor(reddit_test_Y), positive = "TROLL", mode = "prec_recall")
-confusionMatrix(c_rf, factor(reddit_test_Y), positive = "TROLL")
 ```
 
 Calculate AUC
@@ -369,7 +367,7 @@ plotPartial(pdp1, train = reddit_train_X, rug = TRUE, alpha = 0.3)
 ```
 
 
-## Create an ensemble - 
+## Create an ensemble: check out my github in a few days
 
 ```{r}
 ctrl <- trainControl(method = "cv", number = 5,
@@ -395,7 +393,7 @@ caretEnsemble(model.list, method='glmnet')
 ```
 
 
-## Predict on new test set
+## Predict on new test set: check out my github in a few days
 
 ```{r}
 
