@@ -93,6 +93,10 @@ U.S. congress investigations and/or information provided by the platforms themse
 - Reddit: suspect accounts
     - https://www.reddit.com/r/announcements/comments/8bb85p/reddits_2017_transparency_report_and_suspect/
 
+The Reddit trolls
+========================================================
+![informal_flag](pics/GG.png)<br>
+
 Scraping data from Reddit
 ========================================================
 - manual html scraping 
@@ -475,14 +479,13 @@ class: at75
 ![alt text](pics/training_test_error.png)
 
 
-Let us prepare the data
+Let's prepare data for ML!
 ========================================================
 
 ```r
 install.packages("caret","glmnet","randomForests")
 library(caret)
 ```
-
 
 Cross-validation
 ========================================================

@@ -369,7 +369,7 @@ plotPartial(pdp1, train = reddit_train_X, rug = TRUE, alpha = 0.3)
 ```
 
 
-## Create an ensemble - TBD
+## Create an ensemble - 
 
 ```{r}
 ctrl <- trainControl(method = "cv", number = 5,
@@ -398,7 +398,75 @@ caretEnsemble(model.list, method='glmnet')
 ## Predict on new test set
 
 ```{r}
-Y_test_later = 
+
 ```
 
+
+
+# Work on your own datasets
+
+### Text processing
+```{r}
+### read data frame
+
+### define corpus
+OWNcorpus_own = corpus()
+
+### create dfm
+
+OWNDFM_final =tokens(OWNcorpus, what = c("word")) %>% 
+  tokens_tolower() %>%
+  tokens(remove_numbers = TRUE, 
+         remove_punct = TRUE, 
+         remove_symbols = TRUE, 
+         remove_separators = TRUE,
+         remove_hyphens = FALSE) %>%
+  tokens_remove(stopwords("en")) %>% 
+  tokens_wordstem(language = "en") %>% 
+  dfm() %>% 
+  dfm_trim(min_docfreq = 0.005,
+           max_docfreq = 0.900,
+           docfreq_type = "prop") %>% 
+  dfm_replace(featnames(OWNDFM_trim), 
+              make.names(featnames(OWNDFM_trim), unique = TRUE)) %>% 
+  dfm_tfidf(scheme_tf = "count")
+
+OWNDFM_final
+
+### create dfm
+OWNDFM_final
+```
+
+### Machine Learning
+```{r}
+TEXTOWN = convert(OWNDFM_final, to = "data.frame")[,-1]
+METADATAOWN = docvars(OWNDFM_final)
+DEPVARNAME = ""
+Xo = cbind(TEXTOWN , METADATAOWN) 
+Xo = model.matrix(DEPVARNAME~., X)
+set.seed(735)
+trainOWN <- sample(1:nrow(R_DFM_final), 0.7*nrow(R_DFM_final))
+length(trainOWN)
+###
+reddit_train_Xo <- Xo[train,]
+  reddit_test_Xo <- Xo[-train,]
+reddit_train_Yo = docvars(OWNDFM_final)$DEPVARNAME[train]
+  reddit_test_Yo = docvars(OWNDFM_final)$DEPVARNAME[-train] 
+```
+
+```{r}
+ctrl <- trainControl(method = "cv", number = 5,
+                     classProbs = TRUE, 
+                     summaryFunction = prSummary,
+                     savePredictions = TRUE)
+
+train_lasso1_OWN <- train(x = reddit_train_Xo, y = reddit_train_Yo, 
+                     method = "glmnet",
+                     metric = "F",
+                     tuneGrid = tuneGrid_glm,
+                     trControl = ctrl)
+
+categ <- predict(train_lasso1_OWN, newdata = reddit_test_Xo)
+confusionMatrix(categ, reddit_test_Yo, positive = "nameofyourclass", mode = "prec_recall")
+```
 
