@@ -8,23 +8,27 @@ css: presstyle.css
 
 Overview
 ========================================================
-
-1. Computational propaganda
+class: at85
+1.Computational propaganda
   - methods of identification
   - list of Reddit trolls
   - explore Reddit dataset
-2. Text as data 
-  - Document-term matrix
+
+<br>
+2.Text as data 
   - Text processing
+  - Document-term matrix
   - Example with Reddit submission titles
   
 ***
-3. Basics of Machine Learning 
+3.Basics of Machine Learning 
   - Lasso regression
   - Random forests
-  - Building an ensemble learner
   - Identifying trolls on Reddit
-4. Pipeline to apply to your own data or improve model on Reddit 
+  
+4.Pipeline to apply to your own data or improve model on Reddit 
+<br><br>
+www.github.com/nomoteticus/mltext-tutorial-2009
 
 
 Computational propaganda
@@ -50,9 +54,34 @@ State-sponsored trolling
 ![iranian](pics/trollarmy_Iran.png)<br>
 ![indian](pics/trollarmy_india.png)<br>
 
-Computational propaganda
+Labeling propaganda
 ========================================================
+class: at70
+<hr>
+1. Hand coding by researchers
+  - 
+2. Use pre-existing labels:
+  - official flags
+      - s
+  - informal flags
+      - s
+      - s
+    
+***
 
+<br>
+#### Example of informal flag:<br>
+##### (Achimescu, Sultanescu, Sultanescu 2018)<br>
+
+
+Official flags
+========================================================
+- Twitter
+- Facebook
+- Reddit
+
+
+IMAGE HERE
 
 Scraping data from Reddit
 ========================================================
@@ -68,20 +97,33 @@ Scraping data from Reddit
   
 Let's see the data!
 ========================================================
-
+class: at85
+<hr>
 
 ```r
-install.packages("quanteda")
+### For data manipulation
 install.packages("dplyr","readr")
-library(quanteda)
+### For text processing
+install.packages("quanteda")
+### For machine learning
+install.packages("caret","glmnet",
+                 "randomForests","pdp")
+
 library(dplyr)
 library(readr)
+
+### Piping operator %>%
+rev(sort(round(log(rnorm(100, 5, 1),2))))
+### Equivalent
+rnorm(100, 5, 1) %>% 
+  log(2) %>% round %>% sort %>% rev
 ```
 
 
 
 Text as Data
 ========================================================
+class: at75
 <hr>
 <p></p>
 - Corpus = a collection of texts/documents
@@ -90,8 +132,15 @@ Text as Data
   - Count of words for each document in corpus
   - Discards word order, ignores word meaning
   - Purpose: reduction of complexity
+  
+***
+<br>
 - Pre-processing steps:
   - tokenization
+  - removing irrelevant features
+  - stemming/lemmatization
+  - creating a document-term matrix(DTM)
+  - weighting the DTM
 
 
 Computational text analysis
@@ -153,6 +202,23 @@ Many-to-one mapping from words to stem/lemma<br>
 - based on morphological analysis of each word
 <br><span class="sky">are -> be</span>
 
+
+
+Let's tokenize and clean the texts!
+========================================================
+
+```r
+install.packages("quanteda")
+library(quanteda)
+
+CRP = corpus(data_frame, 
+             docid_field, 
+             textid_field)
+# Alternative:
+CRP = corpus(vector_of_documents)
+
+TOK = tokens(CRP)
+```
 
 Document-Term Matrix (DTM)
 ========================================================
@@ -243,9 +309,10 @@ Text3: "Days are few and long"</span>
 </table>
 
 
-Normalization and Weighting DTM
+Normalization and Weighting
 ========================================================
 left: 50%
+class: at75
 <hr>
 ### Normalization (relative frequencies)
 - proportions of the feature counts within each document
@@ -309,12 +376,23 @@ $$w_{i,j} = tf_{i,j}\cdot log(\frac{N}{df_{i}})$$
 
 
 
+Let's build the DFM!
+========================================================
+
+```r
+library(quanteda)
+
+CRP = corpus(data_frame)
+TOK = tokens(CRP)
+DFM = dfm(TOK)
+```
 
 
 Machine learning
 ========================================================
 class: at70 
 <hr>
+<i>James, Witten, Hastie and Tibshirani, 2017. An introduction to statistical learning. New York: Springer</i>
 #### Goal: building a statistical model for predicting or estimating an output based on one or more inputs
   - <b>X</b> = Inputs / Features
     - ~ Independent variables
@@ -386,6 +464,14 @@ class: at75
 ![alt text](pics/training_test_error.png)
 
 
+Let us prepare the data
+========================================================
+
+```r
+install.packages("caret","glmnet","randomForests")
+library(caret)
+```
+
 
 Cross-validation
 ========================================================
@@ -454,14 +540,16 @@ Model selection
 class: at75
 <hr>
 
-Many different methods/classifiers
-- K nearest neighbours
-- Naive Bayes
-- Support vector machines
+Many different methods/classifiers:
+- Logistic regression
 - Regularized logistic regression
   - Ridge Regression
   - <b> The Lasso </b>
   - Elastic net
+- K nearest neighbours
+- Naive Bayes
+- Support vector machines
+- Neural networks
   
 *** 
 <br><br>
@@ -484,31 +572,106 @@ need to finish
 ![precision](pics/perf_precision.png) 
 ![recall](pics/perf_recall.png) 
 
+Supervised ML - summary
+========================================================
+<hr>
+<br><br><br><br><br><br><br><br>
+
+```r
+library(caret)
+library(glmnet)
+library(randomForest)
+```
+
+
+
+The Lasso
+========================================================
+class: at75
+<hr>
+Problem: large number of features K>>N<br>
+Solution: Logistic regression with L1 norm/penalty 
+- shrinks some coefficients to 0
+
+Advantages of LASSO
+- built-in feature selection: reduces the number of variables
+- control for multicollinearity 
+- fast convergence
+
+Disadvantages:
+- linearity assumption for continuous predictors
+- additive assumptions: interactions between predictors have to be specified
+
 Lasso regression
 ========================================================
-Motivation - large number of features K>>N
+class: at75
+<hr>
+Maximizes the penalized log-likelihood:<br>
 
-Advantages of LASSO <i>(Schreiber-Gregory, 2018)</i>
-- feature selection: reduces the number of variables in a model
-- control for multicollinearity 
-- enforces sparcity in parameter selection and inclusion
+$$ a+b $$
+
+Lambda is the tuning parameter
+- lambda=0: no penalization
+- max(lambda): all coefficients = 0
+
+![lasso_shrinkage](pics/lasso2b.png) 
+![lasso_estimation](pics/lasso1b.png) 
+
+
+Let's throw the Lasso!
+========================================================
+
+```r
+library(caret)
+library(glmnet)
+```
+
+
+
+Decision trees
+========================================================
+class: at70
+<hr>
+#### <b>CART</b> = Classification and Regression Trees
+- non-parametric
+- partition of the feature space
+- good for capturing interaction effects
+- can overfit training data
+!!! ADD GRAPH !!!
+
 
 Random forests
 ========================================================
-TBD
+class: at70
+<hr>
+- Advantage: nonparametric, captures complex relationships and nonlinearity
+- Disadvantage: computationally intensive, noise increases misclassification
+- Algorithm: grow B trees and average prediction across all of them
+![random_forests_algo](pics/RandomForests.png)
+<br>(Hastie, Tibshirani and  2018)
 
-Ensemble classifier
+Let's grow a forest!
 ========================================================
-TBD
+<hr>
 
-Supervised machine learning / Summary
-========================================================
-(I can use the )
+```r
+library(caret)
+library(glmnet)
+```
+
+
 
 Other uses with comments/tweets
 ========================================================
+<br>
 - Tory vs Labour
-- Remain vs Leave
+- Remain vs Leave EU
 - Democrat vs Republican
+- Your data 
+    - any ideas?
 
+References
+========================================================
+<hr>
+coming soon
 
