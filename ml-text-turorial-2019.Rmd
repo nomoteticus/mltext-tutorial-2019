@@ -105,6 +105,25 @@ R_tokens_stemmed = R_tokens_cleaned %>% tokens_wordstem(language = "en")
 R_tokens_stemmed[1:5]
 ```
 
+N-grams
+```{r}
+unigrams = unigrams; 
+    cat("\nUnigrams :"); print(unigrams)
+bigrams = unigrams %>% tokens_ngrams(n=2); 
+    cat("\nBigrams :"); print(bigrams)
+trigrams = unigrams %>% tokens_ngrams(n=3); 
+    cat("\nTrigrams :"); print(bigrams)
+skipgrams1 = unigrams %>% tokens_ngrams(n=3, skip = c(0,1))
+    cat("\nTrigrams(including 1-skip) :"); print(skipgrams1)
+
+### Add ngrams to tokens 
+cat("\n\nAdding nGrams:\n")
+print("- keeping onegrams")
+unigrams %>% tokens_compound(phrase("barack obama"), join = TRUE)
+print("- dropping onegrams")
+unigrams %>% tokens_compound(phrase("barack obama"), join = FALSE)
+```
+
 
 Create document-feature-matrix (DFM)
 

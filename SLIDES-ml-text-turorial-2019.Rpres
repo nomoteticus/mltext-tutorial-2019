@@ -1,7 +1,7 @@
-Workshop
+Introduction to Computational Text Analysis and Supervised Machine Learning in R
 ========================================================
-author: Vlad
-date: 19/05/2001
+author: Vlad Achimescu, University of Mannheim
+date: 17/04/2019, Exeter Q-Step centre
 font-family: 'Helvetica'
 css: presstyle.css
 
@@ -9,31 +9,74 @@ css: presstyle.css
 Overview
 ========================================================
 
-1. Computational propaganda (20 minutes)
-  - social bots, trolls, cyborgs
+1. Computational propaganda
   - methods of identification
   - list of Reddit trolls
   - explore Reddit dataset
-2. Text as data (40 minutes)
+2. Text as data 
   - Document-term matrix
   - Text processing
   - Example with Reddit submission titles
   
 ***
-3. Basics of Machine Learning (1 hour)
+3. Basics of Machine Learning 
   - Lasso regression
   - Random forests
-  - Building an Ensemble learner
+  - Building an ensemble learner
   - Identifying trolls on Reddit
-4. Pipeline to apply to your own data or improve model on Reddit (30 minutes+)
+4. Pipeline to apply to your own data or improve model on Reddit 
 
 
-Computational propaganda - TBD
+Computational propaganda
+========================================================
+class: at75
+<hr>
+= "the use of algorithms, automation and human curation to purposefully manage and distribute misleading information over social media networks" (Wooley and Howard 2016)
+- Pseudo-users: political bots, trolls, cyborgs
+- (semi-)automation, scalability, anonimity
+- Political astroturfing used for (Wooley & Guilebeaut 2017):
+  - manufacturing or breaking consensus
+  - bandwagon effect 
+  - democratizing propaganda
+  - attacking political adversaries
+  - voter demobilization
+- State-sponsored trolling
+
+
+State-sponsored trolling
+========================================================
+<hr>
+![russian](pics/trollarmy_Russia.png)<br>
+![iranian](pics/trollarmy_Iran.png)<br>
+![indian](pics/trollarmy_india.png)<br>
+
+Computational propaganda
 ========================================================
 
-### Bullet 1
-- Bullet 2
-- Bullet 3
+
+Scraping data from Reddit
+========================================================
+- manual html scraping 
+  - BeautifulSoup / rvest 
+  - not reccomended
+- using Reddit API
+  - PRAW / RedditExtractoR
+  - limited to 1000 items
+- downloading from www.pushshift.io/reddit
+  - submissions
+  - comments
+  
+Let's see the data!
+========================================================
+
+```{r, eval=FALSE}
+install.packages("quanteda")
+install.packages("dplyr","readr")
+library(quanteda)
+library(dplyr)
+library(readr)
+```
+
 
 
 Text as Data
@@ -64,17 +107,6 @@ Not covered in this seminar
 - Word embeddings (word2vec)
 
 
-Scraping data from Reddit
-========================================================
-- manual html scraping 
-  - BeautifulSoup / rvest 
-  - not reccomended
-- using Reddit API
-  - PRAW / RedditExtractoR
-  - limited to 1000 items
-- downloading from www.pushshift.io/reddit
-  - submissions
-  - comments
 
 Tokenization
 ========================================================
@@ -416,7 +448,7 @@ $$CV_{k}=\frac{1}{k}\sum_{i=1}^{k}{Err_{i}}$$ $$Err_{i}=I(y_{i} \neq \hat{y}_{i}
 </table>
 - can also do repeated cross-validation
 
-Model evaluation
+Model selection
 ========================================================
 class: at75
 <hr>
