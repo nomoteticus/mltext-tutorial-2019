@@ -1,9 +1,10 @@
 Introduction to Computational Text Analysis and Supervised Machine Learning in R
 ========================================================
-author: Vlad Achimescu, University of Mannheim
+author: Vlad Achimescu, University of Mannheim, v.achimescu@uni-mannheim.de
 date: 17/04/2019, Exeter Q-Step centre
 font-family: 'Helvetica'
 css: presstyle.css
+
 
 
 Overview
