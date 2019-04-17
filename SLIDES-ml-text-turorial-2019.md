@@ -28,7 +28,7 @@ class: at85
   
 4.Pipeline to apply to your own data or improve model on Reddit 
 <br><br>
-www.github.com/nomoteticus/mltext-tutorial-2009
+https://github.com/nomoteticus/mltext-tutorial-2019
 
 
 Computational propaganda
