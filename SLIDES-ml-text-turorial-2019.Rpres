@@ -81,8 +81,8 @@ class: at70
 Official flags
 ========================================================
 class: at70
+<hr>
 U.S. congress investigations and/or information provided by the platforms themselves
-<br>
 
 - Twitter: 
     - 10 million tweets by around 4,600 Russian and Iranian-linked propaganda accounts
