@@ -222,6 +222,7 @@ Many-to-one mapping from words to stem/lemma<br>
 
 Let's tokenize and clean the texts!
 ========================================================
+<hr>
 
 ```r
 install.packages("quanteda")
@@ -394,6 +395,7 @@ $$w_{i,j} = tf_{i,j}\cdot log(\frac{N}{df_{i}})$$
 
 Let's build the DFM!
 ========================================================
+<hr>
 
 ```r
 library(quanteda)
@@ -482,6 +484,7 @@ class: at75
 
 Let's prepare data for ML!
 ========================================================
+<hr>
 
 ```r
 install.packages("caret","glmnet","randomForests")
@@ -491,6 +494,7 @@ library(caret)
 Cross-validation
 ========================================================
 class: at75
+<hr>
 - randomly divide the set of observations into <i>k</i> groups (5,10) of equal size
 - used for model selection
   - for k = 1..K, train on all folds but kth, validate on kth
@@ -654,6 +658,7 @@ $$ \underset{\beta_{0},\beta}{max} \left \{ \sum_{i=1}^{N}\left [ y_{i}( \beta_{
 
 Let's throw the Lasso!
 ========================================================
+<hr>
 
 ```r
 library(caret)
@@ -698,7 +703,7 @@ library(glmnet)
 
 Other uses with comments/tweets
 ========================================================
-<br>
+<hr>
 - Tory vs Labour
 - Remain vs Leave EU
 - Democrat vs Republican
