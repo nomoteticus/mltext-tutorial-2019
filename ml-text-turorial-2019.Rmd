@@ -106,7 +106,7 @@ R_tokens_stemmed[1:5]
 
 N-grams
 ```{r}
-unigrams = unigrams; 
+unigrams = R_tokens_stemmed[4]
     cat("\nUnigrams :"); print(unigrams)
 bigrams = unigrams %>% tokens_ngrams(n=2); 
     cat("\nBigrams :"); print(bigrams)
@@ -157,7 +157,7 @@ R_DFM_cleaned = dfm_replace(R_DFM_trim,
                             featnames(R_DFM_trim), 
                             make.names(featnames(R_DFM_trim), unique = TRUE))
 R_DFM_cleaned
-R_DFM_cleaned[1:10,1:10]
+R_DFM_cleaned[1:20,1:10]
 ```
 
 Working with DFM
@@ -208,12 +208,12 @@ R_DFM_final =tokens(R_corpus, what = c("word")) %>%
                 make.names(featnames(R_DFM_trim), unique = TRUE)) %>% 
     dfm_tfidf(scheme_tf = "count")
 
-R_DFM_final = R_DFM_TFIDF
+R_DFM_final
 ```
 
 ## Machine Learning
 
-Separate training set and test set
+Create X and Y 
 
 ```{r}
 TEXT = convert(R_DFM_final, to = "data.frame")[,-1]
@@ -223,6 +223,7 @@ X = model.matrix(META_is_troll~., X)
 View(X[1:20,])
 ```
 
+Separate training set and test set
 
 ```{r}
 set.seed(735)
@@ -259,7 +260,8 @@ Training the model
 
 ```{r}
 ### 
-train_lasso <- train(x = reddit_train_X, y = reddit_train_Y, 
+train_lasso <- train(x = reddit_train_X, 
+                     y = reddit_train_Y, 
                      method = "glmnet",
                      metric = "F",
                      tuneGrid = tuneGrid_glm,
@@ -294,10 +296,10 @@ Check coefficients
 coef_lasso = coef(finalModel_lasso, bestTune_lasso$lambda) %>% as.vector
   names(coef_lasso) = colnames(reddit_train_X)
 print("Features: TROLL")
-  coef_lasso %>% sort %>% rev %>%  head(30)
+  coef_lasso %>% sort %>% rev %>%  head(40)
 cat("\n")
 print("Features: NOT troll")
-  coef_lasso %>% sort %>% head(30)
+  coef_lasso %>% sort %>% head(40)
 ```
 
 
@@ -338,7 +340,6 @@ Predict on test set
 
 ```{r}
 c_rf <- predict(train_rf, newdata = reddit_test_X)
-r_rf <- predict(train_rf, newdata = reddit_test_X, type = "prob")
 confusionMatrix(c_rf, factor(reddit_test_Y), positive = "TROLL", mode = "prec_recall")
 ```
 
@@ -361,7 +362,7 @@ Partial dependence plots
 
 ```{r, fig.align="center"}
 library(pdp)
-pdp1 <- partial(train_rf, pred.var = "META_hour", trim.outliers = T, grid.resolution=24, 
+pdp1 <- partial(train_rf, pred.var = "META_logscore", trim.outliers = T, grid.resolution=24, 
                 type = "classification", prob=TRUE, which.class = "TROLL")
 plotPartial(pdp1, train = reddit_train_X, rug = TRUE, alpha = 0.3)
 ```

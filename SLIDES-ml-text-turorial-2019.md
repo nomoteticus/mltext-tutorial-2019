@@ -698,7 +698,7 @@ library(glmnet)
 
 Other uses with comments/tweets
 ========================================================
-<br>
+<hr>
 - Tory vs Labour
 - Remain vs Leave EU
 - Democrat vs Republican
