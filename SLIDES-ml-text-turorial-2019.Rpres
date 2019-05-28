@@ -36,10 +36,10 @@ Computational propaganda
 ========================================================
 class: at75
 <hr>
-= "the use of algorithms, automation and human curation to purposefully manage and distribute misleading information over social media networks" (Wooley and Howard 2016)
+= "the use of algorithms, automation and human curation to purposefully manage and distribute misleading information over social media networks" (Wooley and Howard 2018)
 - Pseudo-users: political bots, trolls, cyborgs
 - (semi-)automation, scalability, anonimity
-- Political astroturfing used for (Wooley & Guilebeaut 2017):
+- Political astroturfing used for:
   - manufacturing or breaking consensus
   - bandwagon effect 
   - democratizing propaganda
@@ -60,12 +60,12 @@ Labeling propaganda
 class: at70
 <hr>
 1. Hand coding by researchers
-  - Sanovich et al. 2015
+  - Stukal et al. 2017
 2. Use pre-existing labels:
   - official flags
       - Im Jane et al. 2019
   - informal flags
-      - Mihaylov and Preslav 2016
+      - Mihaylov et al. 2018
       - Achimescu, Sultanescu and Sultanescu 2018
           - <a href = "https://www.bigsurv18.org/program?sess=56">BigSurv2018 conference</a>
           - <a href = "https://www.gor.de/gor19/index.php?page=browseSessions&form_session=22&presentations=show">Poster at GOR2019 conference</a>
@@ -705,5 +705,23 @@ Other uses with comments/tweets
 
 References
 ========================================================
+class: at70
 <hr>
-...coming soon
+<b>Computational propaganda</b>
+- Im Jane; Chandrasekharan, Eshwar; Sargent, Jackson; Lighthammer, Paige; Denby, Taylor; Bhargava, Ankit et al. (31-Jan-19): Still out there: Modeling and Identifying Russian Troll Accounts on Twitter. Available online at http://arxiv.org/pdf/1901.11162v1.
+- Mihaylov, Todor; Mihaylova, Tsvetomila; Nakov, Preslav; Màrquez, Lluís; Georgiev, Georgi D.; Koychev, Ivan Kolev (2018): The dark side of news community forums: opinion manipulation trolls. In Internet Research 28 (5), pp. 1292–1312. DOI: 10.1108/IntR-03-2017-0118.
+- Stukal, Denis; Sanovich, Sergey; Bonneau, Richard; Tucker, Joshua A. (2017): Detecting Bots on Russian Political Twitter. In Big data 5 (4), pp. 310–324. DOI: 10.1089/big.2017.0038.
+- Woolley, Samuel; Howard, Philip N. (Eds.) (2019): Computational propaganda. Political parties, politicians, and political manipulation on social media. New York NY United States of America: Oxford University Press (Oxford studies in digital politics).
+
+
+References
+========================================================
+class: at70
+<hr>
+<b>Machine Learning and Text Processing</b>
+- Biau, Gérard; Scornet, Erwan (18-Nov-15): A Random Forest Guided Tour. Available online at http://arxiv.org/pdf/1511.05741v1.
+- Friedman, Jerome; Hastie, Trevor; Tibshirani, Robert (2010): Regularization Paths for Generalized Linear Models via Coordinate Descent. In J. Stat. Soft. 33 (1). DOI: 10.18637/jss.v033.i01.
+- Grimmer, Justin; Stewart, Brandon M. (2013): Text as Data: The Promise and Pitfalls of Automatic Content Analysis Methods for Political Texts. In Polit. anal. 21 (3), pp. 267–297. DOI: 10.1093/pan/mps028.
+- Hastie, Trevor; Tibshirani, Robert; Friedman, J. H. (2009): The elements of statistical learning. Data mining, inference, and prediction. 2nd ed. New York: Springer (Springer series in statistics).
+- James, Gareth; Witten, Daniela; Hastie, Trevor; Tibshirani, Robert (2013): An introduction to statistical learning. With applications in R. New York: Springer (Springer texts in statistics, 103).
+
